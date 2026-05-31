@@ -1,0 +1,8 @@
+{"type":"queue-operation","timestamp":"2026-05-30T10:00:00Z","op":"noise"}
+{"type":"summary","summary":"context compaction checkpoint","timestamp":"2026-05-30T10:00:01Z"}
+{"type":"user","timestamp":"2026-05-30T10:00:02Z","sessionId":"9620f8ab-1111-2222-3333-444455556666","cwd":"/tmp/cc-history-fixture","message":{"role":"user","content":[{"type":"text","text":"Help me debug the auth flow. שלום עולם"}]}}
+{"type":"assistant","timestamp":"2026-05-30T10:00:03Z","sessionId":"9620f8ab-1111-2222-3333-444455556666","message":{"role":"assistant","content":[{"type":"thinking","thinking":"The heatmap component needs to re-render when the filter changes."},{"type":"text","text":"Let me look at the authentication code."},{"type":"tool_use","name":"Read","input":{"file_path":"/tmp/auth.py","limit":50}}]}}
+{"type":"user","timestamp":"2026-05-30T10:00:04Z","sessionId":"9620f8ab-1111-2222-3333-444455556666","message":{"role":"user","content":[{"type":"tool_result","content":"def login(user, password):\n    return verify(user, password)"}]}}
+{"type":"assistant","timestamp":"2026-05-30T10:00:05Z","sessionId":"9620f8ab-1111-2222-3333-444455556666","message":{"role":"assistant","content":[{"type":"text","text":"The login function looks fine. The bug is in verify()."},{"type":"image","source":{"type":"base64","data":"SKIPME"}}]}}
+{"type":"user","timestamp":"2026-05-30T10:00:06Z","sessionId":"9620f8ab-1111-2222-3333-444455556666","message":"this is an old stringified message about Match3 gameplay"}
+{"type":"assistant","timestamp":"2026-05-30T10:00:07Z","sessionId":"9620f8ab-1111-2222-3333-444455556666","message":{"role":"assistant","content":[{"type":"tool_use","name":"Bash","input":{"command":"pytest tests/"}}]}}
