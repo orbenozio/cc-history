@@ -189,8 +189,8 @@ For user/assistant entries, the payload is in `message.content`, an array of blo
 | ------------- | ----------- | ------------- | --------------------------------------------------------------------- | ---------------------------------------------------------- |
 | `text`        | as outer    | `text`        | `block.text`                                                          |                                                            |
 | `thinking`    | `assistant` | `thinking`    | `block.thinking`                                                      | Indexed by default. See §6.1.                              |
-| `tool_use`    | `assistant` | `tool_use`    | `f"{block.name}({json.dumps(block.input)})"`, truncated to 4096 chars | `tool_name = block.name`                                   |
-| `tool_result` | `user`      | `tool_result` | Stringified `block.content`, truncated to 8192 chars                  | If truncated, append `\n[…truncated, full length N bytes]` |
+| `tool_use`    | `assistant` | `tool_use`    | `f"{block.name}({json.dumps(block.input)})"`, truncated to 4096 **bytes** (UTF-8) | `tool_name = block.name`                        |
+| `tool_result` | `user`      | `tool_result` | Stringified `block.content`, truncated to 8192 **bytes** (UTF-8)      | If truncated, append `\n[…truncated, full length N bytes]` |
 | `image`       | —           | —             | SKIP                                                                  |                                                            |
 
 ### 6.1 Robustness rules

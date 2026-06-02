@@ -94,11 +94,26 @@ class QueryTests(unittest.TestCase):
         self.assertEqual(cc.build_fts_query('"x y"'), '"x y"')
 
     def test_duration_parsing(self):
-        # Should produce a parseable ISO timestamp; just assert format prefix.
-        out = cc.parse_duration_or_date("2d")
-        self.assertRegex(out, r"^\d{4}-\d{2}-\d{2}T")
+        # Both branches must return a UTC ("…Z") timestamp so string-compares
+        # against entries.ts (also UTC "Z") are correct across timezones.
+        iso_z = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$"
+        self.assertRegex(cc.parse_duration_or_date("2d"), iso_z)
         out = cc.parse_duration_or_date("2026-01-15")
-        self.assertTrue(out.startswith("2026-01-15"))
+        self.assertRegex(out, iso_z)
+        # A naive local date is interpreted as local midnight, then converted
+        # to UTC — verify it matches that exact conversion (tz-independent).
+        from datetime import datetime, timezone
+        expected = (datetime(2026, 1, 15)
+                    .astimezone(timezone.utc)
+                    .strftime("%Y-%m-%dT%H:%M:%SZ"))
+        self.assertEqual(out, expected)
+
+    def test_explicit_offset_honored(self):
+        # An explicit offset is converted to UTC, not reinterpreted as local.
+        self.assertEqual(
+            cc.parse_duration_or_date("2026-01-15T12:00:00+02:00"),
+            "2026-01-15T10:00:00Z",
+        )
 
 
 class NaiveDecodeTests(unittest.TestCase):

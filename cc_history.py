@@ -608,10 +608,13 @@ def parse_duration_or_date(value: str) -> str:
             "m": timedelta(days=30 * n),
         }[unit]
         return (datetime.now(timezone.utc) - delta).strftime("%Y-%m-%dT%H:%M:%SZ")
-    # treat as a date/datetime
+    # treat as a date/datetime. entries.ts is stored as UTC ("…Z"), so a
+    # bare/naive date or datetime is interpreted as *local* wall-clock and
+    # converted to UTC; an explicit offset is honored. This keeps string
+    # comparisons against ts correct across timezones.
     try:
         dt = datetime.fromisoformat(value)
-        return dt.strftime("%Y-%m-%dT%H:%M:%S")
+        return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     except ValueError:
         raise SystemExit(f"Invalid --since/--until value: {value!r}")
 
