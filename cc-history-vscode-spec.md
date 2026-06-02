@@ -543,6 +543,11 @@ The whole design hinges on `better-sqlite3` (with FTS5 + the Hebrew tokenizer) l
 
 **Exit criterion:** the Hebrew `MATCH` returns the seeded row, in a worker, inside real VS Code, **loaded from the installed `.vsix`**, on both OSes, from a CI-built binary. **If the worker+native+packaged path is flaky, adopt the pre-decided fallback (§12): native on the main thread with batched/yielding transactions, or a forked indexer** — and confirm *that* path with the same packaged-vsix test before proceeding. Do not start UI work until one execution model passes from an installed `.vsix`.
 
+> **Phase 0 result — 2026-06-02 (Windows, PASS).** Spike repo: https://github.com/orbenozio/cc-history-vscode.
+> - `better-sqlite3@12.10.0` (SQLite 3.53.1) rebuilt against Electron 39.8.8 via `@electron/rebuild`; native `MATCH 'שלום'` returns the seeded Hebrew row **inside a `worker_thread`** in real VS Code **1.120.0 / Electron 39.8.8 / ABI 140** (`@vscode/test-electron`, exit 0). The packaged `.vsix` correctly bundles `better_sqlite3.node` (verified); installed-`.vsix` manual run confirmed. **The worker+native execution model holds — no fallback needed.**
+> - **macOS still owed** (the author has a Mac): the CI workflow runs the same proof on `windows-latest` + `macos-latest` but isn't enabled yet (the `gh` token lacks the `workflow` scope; the workflow file exists locally). Enable, then treat the macOS run as the second half of this exit criterion.
+> - **Hebrew-quality finding for Phase 1:** with `unicode61 remove_diacritics 2`, `MATCH 'שלום'` did **not** also match a niqqud-pointed row (`שָׁלוֹם`). Hebrew points (U+05B0–U+05BF) are not folded by this tokenizer/SQLite build. Investigate in Phase 1 — likely needs a custom tokenizer or pre-normalization (strip niqqud before indexing) so pointed and unpointed Hebrew match. **This affects the CLI too** (same tokenizer) and the byte-for-byte parity contract, so decide the normalization in one place.
+
 ### Phase 1 — Core port + golden-file conformance (no UI)
 
 - Port CLI §5 schema, §6 parser (incl. the exact drop/asymmetry rules and Python-`json.dumps` separators, §5), the byte-based `_truncate` (§5), §6.2 decode, search query building (incl. the operator regex), and the incremental indexer onto the `SqliteEngine` seam, all in `core/`.
