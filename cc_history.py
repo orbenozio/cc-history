@@ -852,6 +852,12 @@ class Scheduler:
     def status_command_hint(self) -> str:
         raise NotImplementedError
 
+    def install_shim(self) -> str:
+        """Create a `cc-history` entry-point so it runs as a bare command, and
+        try to put it on PATH. Returns a human-readable hint for the install
+        summary. Must never raise — fall back to printing the path."""
+        raise NotImplementedError
+
 
 class MacLaunchAgentScheduler(Scheduler):
     def __init__(self):
@@ -920,6 +926,31 @@ class MacLaunchAgentScheduler(Scheduler):
 
     def status_command_hint(self) -> str:
         return "launchctl list | grep cc-history"
+
+    def install_shim(self) -> str:
+        bin_dir = Path.home() / ".local" / "bin"
+        shim = bin_dir / "cc-history"
+        script_path = Path(__file__).resolve()
+        try:
+            bin_dir.mkdir(parents=True, exist_ok=True)
+            shim.write_text(
+                "#!/usr/bin/env python3\n"
+                "import os, sys\n"
+                f'os.execv(sys.executable, [sys.executable, "{script_path}"] '
+                "+ sys.argv[1:])\n"
+            )
+            shim.chmod(0o755)
+        except OSError as exc:
+            return (f"Could not create the cc-history shim ({exc}). Run it as: "
+                    f"python3 {script_path} <command>")
+
+        path_dirs = os.environ.get("PATH", "").split(os.pathsep)
+        if str(bin_dir) not in path_dirs:
+            return (f"Created {shim}.\n  ~/.local/bin is not on your PATH — add "
+                    f"it (e.g. echo 'export PATH=\"$HOME/.local/bin:$PATH\"' "
+                    f">> ~/.zshrc) and reopen your terminal to use 'cc-history' "
+                    f"directly.")
+        return f"'cc-history' installed to {shim} (already on PATH)."
 
 
 class WindowsTaskScheduler(Scheduler):
@@ -1034,6 +1065,71 @@ class WindowsTaskScheduler(Scheduler):
     def status_command_hint(self) -> str:
         return f'schtasks /Query /TN "{self.task_name}" /V /FO LIST'
 
+    def install_shim(self) -> str:
+        app_dir = Paths.app_data_dir()
+        script_path = Path(__file__).resolve()
+        cmd_path = app_dir / "cc-history.cmd"
+        try:
+            app_dir.mkdir(parents=True, exist_ok=True)
+            # Interactive use wants visible output, so the shim uses python.exe
+            # (sys.executable), not the background pythonw.exe.
+            cmd_path.write_text(
+                f'@echo off\r\n"{sys.executable}" "{script_path}" %*\r\n',
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            return (f"Could not create the cc-history shim ({exc}). Run it as: "
+                    f'"{sys.executable}" "{script_path}" <command>')
+
+        status = self._add_to_user_path(str(app_dir))
+        if status == "added":
+            return (f"Added {app_dir} to your user PATH. Reopen your terminal, "
+                    f"then 'cc-history' works as a bare command.")
+        if status == "present":
+            return f"'cc-history' available at {cmd_path} (its dir is already on PATH)."
+        return (f"'cc-history' is available at:\n  {cmd_path}\n  (could not update "
+                f"PATH automatically — add that folder to your PATH manually, or "
+                f"call the .cmd by full path.)")
+
+    @staticmethod
+    def _add_to_user_path(directory: str) -> str:
+        """Add `directory` to the *user* PATH via the registry (never setx, which
+        truncates at 1024 chars and merges machine PATH). Returns one of
+        'added' | 'present' | 'failed'."""
+        try:
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment", 0,
+                                winreg.KEY_READ | winreg.KEY_WRITE) as key:
+                try:
+                    cur, _vtype = winreg.QueryValueEx(key, "Path")
+                except FileNotFoundError:
+                    cur = ""
+                entries = [p for p in cur.split(";") if p]
+                if any(os.path.normcase(p) == os.path.normcase(directory)
+                       for p in entries):
+                    return "present"
+                new = f"{cur};{directory}" if cur else directory
+                winreg.SetValueEx(key, "Path", 0, winreg.REG_EXPAND_SZ, new)
+            _broadcast_env_change()
+            return "added"
+        except OSError:
+            return "failed"
+
+
+def _broadcast_env_change() -> None:
+    """Tell running shells the environment changed (WM_SETTINGCHANGE)."""
+    try:
+        import ctypes
+        HWND_BROADCAST = 0xFFFF
+        WM_SETTINGCHANGE = 0x1A
+        SMTO_ABORTIFHUNG = 0x0002
+        ctypes.windll.user32.SendMessageTimeoutW(
+            HWND_BROADCAST, WM_SETTINGCHANGE, 0, "Environment",
+            SMTO_ABORTIFHUNG, 5000, ctypes.byref(ctypes.c_ulong()),
+        )
+    except Exception:  # noqa: BLE001 — best-effort broadcast
+        pass
+
 
 def get_scheduler() -> Scheduler | None:
     if sys.platform == "darwin":
@@ -1073,6 +1169,9 @@ def cmd_install(args) -> int:
     sched.install(interval)
     sched.kickstart()
 
+    # Entry-point shim so `cc-history` works as a bare command (Appendix B).
+    shim_hint = sched.install_shim()
+
     # 5: summary
     print()
     print("cc-history scheduler installed.")
@@ -1080,6 +1179,7 @@ def cmd_install(args) -> int:
     print(f"  Log:        {Paths.log_path()}")
     print(f"  DB:         {Paths.db_path()}")
     print(f"  Verify:     {sched.status_command_hint()}")
+    print(f"  Command:    {shim_hint}")
     print()
     print("Try a search:")
     print('  cc-history search "something you remember" --limit 5')

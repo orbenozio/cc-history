@@ -175,6 +175,44 @@ class EndToEndTests(unittest.TestCase):
         self.assertTrue(len(rows) >= 1)
         ro.close()
 
+    def test_crash_midfile_rolls_back(self):
+        """Sanity test #10: a failure mid-file must roll back every row from
+        that file and leave last_offset untouched, so a re-run retries cleanly
+        without doubling entry counts."""
+        # sqlite3.Connection.execute is read-only, so wrap it in a proxy that
+        # raises partway through the inserts to simulate a crash mid-file.
+        class _CrashingConn:
+            def __init__(self, real, fail_on_nth_insert):
+                self._real = real
+                self._n = 0
+                self._fail = fail_on_nth_insert
+
+            def execute(self, sql, *a, **k):
+                if sql.startswith("INSERT INTO entries "):
+                    self._n += 1
+                    if self._n == self._fail:
+                        raise RuntimeError("simulated crash mid-file")
+                return self._real.execute(sql, *a, **k)
+
+            def __getattr__(self, name):
+                return getattr(self._real, name)
+
+        proxy = _CrashingConn(self.conn, fail_on_nth_insert=3)
+        with self.assertRaises(RuntimeError):
+            cc.index_file(proxy, FIXTURE, "/tmp/p", 0, False)
+
+        # Rollback: no entries, no files row -> next run starts from offset 0.
+        self.assertEqual(
+            self.conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0], 0)
+        self.assertEqual(
+            self.conn.execute("SELECT COUNT(*) FROM files").fetchone()[0], 0)
+
+        # Clean re-run produces the full set exactly once (no doubling).
+        n1 = cc.index_file(self.conn, FIXTURE, "/tmp/p", 0, False)
+        total = self.conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
+        self.assertEqual(n1, total)
+        self.assertGreater(total, 0)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
