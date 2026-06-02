@@ -1,0 +1,4 @@
+# Normalize line endings to LF in the repo and on checkout, on every platform.
+# install.ps1 is a Windows-only script; keep it CRLF for PowerShell friendliness.
+* text=auto eol=lf
+*.ps1 text eol=crlf
