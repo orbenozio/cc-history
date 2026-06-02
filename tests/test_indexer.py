@@ -229,5 +229,32 @@ class EndToEndTests(unittest.TestCase):
         self.assertGreater(total, 0)
 
 
+class GoldenFileTests(unittest.TestCase):
+    """Keep tests/fixtures/expected-entries.json honest: if the parser or
+    truncation changes, the committed golden file must be regenerated (run
+    `python tests/gen_golden.py`). The TS port asserts against this file."""
+
+    def _load_gen(self):
+        import importlib.util
+        gen_path = Path(__file__).resolve().parent / "gen_golden.py"
+        spec = importlib.util.spec_from_file_location("gen_golden", gen_path)
+        gg = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gg)
+        return gg
+
+    def test_golden_is_current(self):
+        gg = self._load_gen()
+        committed = json.loads(
+            (Path(__file__).resolve().parent / "fixtures" / "expected-entries.json")
+            .read_text(encoding="utf-8")
+        )
+        self.assertEqual(committed["entries"], gg.fixture_entries(),
+                         "expected-entries.json is stale — run tests/gen_golden.py")
+        committed_trunc = {c["name"]: c["expected"] for c in committed["truncation"]}
+        gen_trunc = {c["name"]: c["expected"] for c in gg.truncation_cases()}
+        self.assertEqual(committed_trunc, gen_trunc,
+                         "truncation golden is stale — run tests/gen_golden.py")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
