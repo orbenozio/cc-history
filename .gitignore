@@ -1,4 +1,15 @@
+# Python (cli-python/)
 __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+
+# Node / VS Code extension (vscode/)
+vscode/node_modules/
+vscode/out/
+vscode/*.vsix
+vscode/.vscode-test/
+
+# CI workflow held out of git until the gh token has the `workflow` scope
+# (run: gh auth refresh -h github.com -s workflow). Then: git add -f .github/ && push.
+.github/

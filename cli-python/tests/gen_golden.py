@@ -14,8 +14,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import cc_history as cc  # noqa: E402
 
-FIXTURE = Path(__file__).resolve().parent / "fixtures" / "sample-session.jsonl"
-OUT = Path(__file__).resolve().parent / "fixtures" / "expected-entries.json"
+# The golden contract lives in the monorepo's shared/ dir, consumed by both the
+# Python tests and the TypeScript core (cli-python/tests -> repo root).
+SHARED_FIXTURES = Path(__file__).resolve().parents[2] / "shared" / "fixtures"
+FIXTURE = SHARED_FIXTURES / "sample-session.jsonl"
+OUT = SHARED_FIXTURES / "expected-entries.json"
 
 
 def fixture_entries() -> list[dict]:

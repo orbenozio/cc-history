@@ -1,0 +1,44 @@
+{
+  "name": "cc-history-fts-spike",
+  "displayName": "cc-history FTS5 Spike (Phase 0)",
+  "description": "Throwaway spike proving better-sqlite3 FTS5 + Hebrew MATCH works in a worker_thread inside packaged VS Code.",
+  "version": "0.0.1",
+  "publisher": "orbenozio",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ccHistorySpike.runFtsTest",
+        "title": "cc-history Spike: Run FTS5 Hebrew Worker Test"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile",
+    "rebuild": "electron-rebuild -v 39.8.8 -m ./node_modules/better-sqlite3",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.10.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.7.0",
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.96.0",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.2.0",
+    "typescript": "^5.7.0"
+  }
+}

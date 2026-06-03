@@ -17,7 +17,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import cc_history as cc  # noqa: E402
 
-FIXTURE = Path(__file__).resolve().parent / "fixtures" / "sample-session.jsonl"
+# Fixtures live in the monorepo's shared/ contract dir (cli-python/tests -> repo root).
+SHARED_FIXTURES = Path(__file__).resolve().parents[2] / "shared" / "fixtures"
+FIXTURE = SHARED_FIXTURES / "sample-session.jsonl"
 
 
 class ParseTests(unittest.TestCase):
@@ -245,8 +247,7 @@ class GoldenFileTests(unittest.TestCase):
     def test_golden_is_current(self):
         gg = self._load_gen()
         committed = json.loads(
-            (Path(__file__).resolve().parent / "fixtures" / "expected-entries.json")
-            .read_text(encoding="utf-8")
+            (SHARED_FIXTURES / "expected-entries.json").read_text(encoding="utf-8")
         )
         self.assertEqual(committed["entries"], gg.fixture_entries(),
                          "expected-entries.json is stale — run tests/gen_golden.py")

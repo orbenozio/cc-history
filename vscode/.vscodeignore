@@ -1,0 +1,18 @@
+# Exclude dev sources/config from the .vsix, but KEEP node_modules/better-sqlite3
+# (it's a runtime dependency and its compiled .node binary must ship).
+.vscode/**
+src/**
+out/test/**
+**/*.ts
+**/*.map
+tsconfig.json
+.gitignore
+.github/**
+.vscode-test/**
+*.vsix
+
+# Trim better-sqlite3 build cruft but keep the compiled binary + JS.
+node_modules/better-sqlite3/build/Release/obj/**
+node_modules/better-sqlite3/deps/**
+node_modules/better-sqlite3/src/**
+node_modules/.bin/**
